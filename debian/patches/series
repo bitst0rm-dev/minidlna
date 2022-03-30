@@ -6,3 +6,5 @@
 09-do-not-disable-logs-with-systemd.patch
 10-do-not-close-socket-on-sighup.patch
 fix_FTBFS_configure_error.patch
+
+CVE-2022-26505.patch
