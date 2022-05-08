@@ -5,11 +5,9 @@ Updated: 2015-03-01
  minidlna.c | 11 +++++++----
  1 file changed, 7 insertions(+), 4 deletions(-)
 
-diff --git a/minidlna.c b/minidlna.c
-index 754f4f9..85c4e9f 100644
 --- a/minidlna.c
 +++ b/minidlna.c
-@@ -970,11 +970,14 @@ init(int argc, char **argv)
+@@ -969,11 +969,14 @@
  
  	if (runtime_vars.port <= 0)
  	{
