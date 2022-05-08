@@ -273,6 +273,11 @@ ParseHttpHeaders(struct upnphttp * h)
 				p = colon + 1;
 				while(isspace(*p))
 					p++;
+				n = 0;
+				while(p[n] >= ' ')
+					n++;
+				h->req_Host = p;
+				h->req_HostLen = n;
 				for(n = 0; n < n_lan_addr; n++)
 				{
 					for(i = 0; lan_addr[n].str[i]; i++)
@@ -623,7 +628,7 @@ SendResp_presentation(struct upnphttp * h)
 	v = sql_get_int_field(db, "SELECT count(*) from DETAILS where MIME glob 'v*'");
 	p = sql_get_int_field(db, "SELECT count(*) from DETAILS where MIME glob 'i*'");
 	strcatf(&str,
-		"<HTML><HEAD><TITLE>" SERVER_NAME " " MINIDLNA_VERSION "</TITLE></HEAD>"
+		"<HTML><HEAD><TITLE>" SERVER_NAME " " MINIDLNA_VERSION "</TITLE><meta http-equiv=\"refresh\" content=\"20\"></HEAD>"
 		"<BODY><div style=\"text-align: center\">"
 		"<h2>" SERVER_NAME " status</h2></div>");
 
@@ -909,6 +914,18 @@ ProcessHttpQuery_upnphttp(struct upnphttp * h)
 	}
 
 	DPRINTF(E_DEBUG, L_HTTP, "HTTP REQUEST: %.*s\n", h->req_buflen, h->req_buf);
+	if(h->req_Host && h->req_HostLen > 0) {
+		const char *ptr = h->req_Host;
+		DPRINTF(E_MAXDEBUG, L_HTTP, "Host: %.*s\n", h->req_HostLen, h->req_Host);
+		for(i = 0; i < h->req_HostLen; i++) {
+			if(*ptr != ':' && *ptr != '.' && (*ptr > '9' || *ptr < '0')) {
+				DPRINTF(E_ERROR, L_HTTP, "DNS rebinding attack suspected (Host: %.*s)", h->req_HostLen, h->req_Host);
+				Send404(h);/* 403 */
+				return;
+			}
+			ptr++;
+		}
+	}
 	if(strcmp("POST", HttpCommand) == 0)
 	{
 		h->req_command = EPost;
@@ -1306,6 +1323,10 @@ send_file(struct upnphttp * h, int sendfd, off_t offset, off_t end_offset)
 				else if( errno != EAGAIN )
 					break;
 			}
+			else if( ret == 0 )
+			{
+				break;  /* Premature end of file */
+			}
 			else
 			{
 				//DPRINTF(E_DEBUG, L_HTTP, "sent %lld bytes to %d. offset is now %lld.\n", ret, h->socket, offset);
@@ -1325,6 +1346,10 @@ send_file(struct upnphttp * h, int sendfd, off_t offset, off_t end_offset)
 				continue;
 			else
 				break;
+		}
+		else if( ret == 0 )
+		{
+			break;  /* premature end of file */
 		}
 		ret = write(h->ev.fd, buf, ret);
 		if( ret == -1 ) {
@@ -1745,7 +1770,7 @@ SendResp_resizedimg(struct upnphttp * h, char * object)
 	if( ret != 2 )
 	{
 		Send500(h);
-		return;
+		goto resized_error;
 	}
 	/* Figure out the best destination resolution we can use */
 	dstw = width;
