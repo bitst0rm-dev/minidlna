@@ -22,7 +22,6 @@ Vcs-Browser: https://salsa.debian.org/debian/minidlna
 Package: minidlna
 Architecture: any
 Depends: adduser,
-         lsb-base,
          ${misc:Depends},
          ${shlibs:Depends}
 Pre-Depends: ${misc:Pre-Depends}
