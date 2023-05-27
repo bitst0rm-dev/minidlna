@@ -5,3 +5,4 @@
 08-Fix-testupnpdescgen-build.patch
 10-do-not-close-socket-on-sighup.patch
 11-improve-nl-translation.patch
+12-support-album-cover-art-sizes.patch

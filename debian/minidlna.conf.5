@@ -275,6 +275,12 @@ Set to
 to allow symlinks that point outside user-defined
 .Cm media_dir.
 By default, wide symlinks are not followed.
+.It Cm resize_covers
+Resize album cover art to comply with DLNA specs. DLNA standard is
+.Dq 160
+pixels. The value of
+.Dq 0
+completely disables resizing. Large images takes more time to generate. To use this option, thumbnail generation must be enabled at compile time.
 .El
 .Sh FILES
 .Bl -tag -width Ds

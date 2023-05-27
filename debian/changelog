@@ -1,3 +1,10 @@
+minidlna (1.3.2+dfsg+bs0-1) unstable; urgency=medium
+
+  * Add 12-support-album-cover-art-sizes.patch
+    Thanks nymous https://sourceforge.net/p/minidlna/patches/153/
+
+ -- bitst0rm <bitst0rm@users.noreply.github.com>  Sat, 27 May 2023 11:48:41 +0200
+
 minidlna (1.3.2+dfsg-1) unstable; urgency=medium
 
   * New upstream release (Closes: #1005219, #1011629, #1017183, #1024905).

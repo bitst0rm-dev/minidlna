@@ -1,0 +1,122 @@
+From 17856cf181e345c95a3edc401c37a1ba18a9148c Mon Sep 17 00:00:00 2001
+From: bitst0rm <bitst0rm@users.noreply.github.com>
+Date: Sat, 27 May 2023 12:03:33 +0200
+Subject: [PATCH] Add support for album cover art sizes. Thanks nymous
+ https://sourceforge.net/p/minidlna/patches/153/
+
+---
+ albumart.c      | 17 +++++++++++------
+ minidlna.c      |  4 ++++
+ minidlnatypes.h |  1 +
+ options.c       |  1 +
+ options.h       |  1 +
+ 5 files changed, 18 insertions(+), 6 deletions(-)
+
+diff --git a/albumart.c b/albumart.c
+index de026ec..64ded50 100644
+--- a/albumart.c
++++ b/albumart.c
+@@ -67,15 +67,18 @@ save_resized_album_art(image_s *imsrc, const char *path)
+ 	strncpyt(cache_dir, cache_file, sizeof(cache_dir));
+ 	make_dir(dirname(cache_dir), S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH);
+ 
++	if( runtime_vars.cover_size <= 0 )
++		return image_save_to_jpeg_file(imsrc, cache_file);
++
+ 	if( imsrc->width > imsrc->height )
+ 	{
+-		dstw = 160;
+-		dsth = (imsrc->height<<8) / ((imsrc->width<<8)/160);
++		dstw = runtime_vars.cover_size;
++		dsth = (imsrc->height<<8) / ((imsrc->width<<8) / runtime_vars.cover_size);
+ 	}
+ 	else
+ 	{
+-		dstw = (imsrc->width<<8) / ((imsrc->height<<8)/160);
+-		dsth = 160;
++		dstw = (imsrc->width<<8) / ((imsrc->height<<8) / runtime_vars.cover_size);
++		dsth = runtime_vars.cover_size;
+ 	}
+ 	imdst = image_resize(imsrc, dstw, dsth);
+ 	if( !imdst )
+@@ -216,7 +219,8 @@ check_embedded_art(const char *path, uint8_t *image_data, int image_size)
+ 	width = imsrc->width;
+ 	height = imsrc->height;
+ 
+-	if( width > 160 || height > 160 )
++	if( runtime_vars.cover_size > 0 &&
++		( width > runtime_vars.cover_size || height > runtime_vars.cover_size ) )
+ 	{
+ 		art_path = save_resized_album_art(imsrc, path);
+ 	}
+@@ -337,7 +341,8 @@ existing_file:
+ found_file:
+ 			width = imsrc->width;
+ 			height = imsrc->height;
+-			if( width > 160 || height > 160 )
++			if( runtime_vars.cover_size > 0 && 
++				( width > runtime_vars.cover_size || height > runtime_vars.cover_size ) )
+ 				art_file = save_resized_album_art(imsrc, file);
+ 			else
+ 				art_file = strdup(file);
+diff --git a/minidlna.c b/minidlna.c
+index 999adee..11afccd 100644
+--- a/minidlna.c
++++ b/minidlna.c
+@@ -588,6 +588,7 @@ init(int argc, char **argv)
+ 	runtime_vars.max_connections = 50;
+ 	runtime_vars.root_container = NULL;
+ 	runtime_vars.ifaces[0] = NULL;
++	runtime_vars.cover_size = 160; /* DLNA standard value */
+ 
+ 	/* read options file first since
+ 	 * command line arguments have final say */
+@@ -800,6 +801,9 @@ init(int argc, char **argv)
+ 			if (strtobool(ary_options[i].value))
+ 				SETFLAG(MERGE_MEDIA_DIRS_MASK);
+ 			break;
++		case RESIZE_COVER_ART:
++			runtime_vars.cover_size = atoi(ary_options[i].value);
++			break;
+ 		case WIDE_LINKS:
+ 			if (strtobool(ary_options[i].value))
+ 				SETFLAG(WIDE_LINKS_MASK);
+diff --git a/minidlnatypes.h b/minidlnatypes.h
+index a92cc7d..e8f6904 100644
+--- a/minidlnatypes.h
++++ b/minidlnatypes.h
+@@ -49,6 +49,7 @@ struct runtime_vars_s {
+ 	int port;	/* HTTP Port */
+ 	int notify_interval;	/* seconds between SSDP announces */
+ 	int max_connections;	/* max number of simultaneous conenctions */
++	int cover_size; /* max cover width or height */
+ 	const char *root_container;	/* root ObjectID (instead of "0") */
+ 	const char *ifaces[MAX_LAN_ADDR];	/* list of configured network interfaces */
+ };
+diff --git a/options.c b/options.c
+index cee3dff..d32e280 100644
+--- a/options.c
++++ b/options.c
+@@ -65,6 +65,7 @@ static const struct {
+ 	{ FORCE_SORT_CRITERIA, "force_sort_criteria" },
+ 	{ MAX_CONNECTIONS, "max_connections" },
+ 	{ MERGE_MEDIA_DIRS, "merge_media_dirs" },
++	{ RESIZE_COVER_ART, "resize_covers" },
+ 	{ WIDE_LINKS, "wide_links" },
+ 	{ TIVO_DISCOVERY, "tivo_discovery" },
+ 	{ ENABLE_SUBTITLES, "enable_subtitles" },
+diff --git a/options.h b/options.h
+index 1ff5b22..2fff77c 100644
+--- a/options.h
++++ b/options.h
+@@ -58,6 +58,7 @@ enum upnpconfigoptions {
+ 	FORCE_SORT_CRITERIA,		/* force sorting by a given sort criteria */
+ 	MAX_CONNECTIONS,		/* maximum number of simultaneous connections */
+ 	MERGE_MEDIA_DIRS,		/* don't add an extra directory level when there are multiple media dirs */
++	RESIZE_COVER_ART,		/* resize cover art to comply with DLNA spec */
+ 	WIDE_LINKS,			/* allow following symlinks outside the defined media_dirs */
+ 	TIVO_DISCOVERY,			/* TiVo discovery protocol: bonjour or beacon. Defaults to bonjour if supported */
+ 	ENABLE_SUBTITLES,		/* Enable generic subtitle support for all clients by default */
+-- 
+2.39.1
+
